@@ -11,7 +11,7 @@ Navigate to the project directory:
 Run docker code
 > docker-compose up --build
 
-After docker started, you can reach the app over port 8000
+After docker started, you can reach to the app over port 8000
 
 - We have two endpoints: /url_shortener(you can shorten your url via this) and url_shortener/original_url(you can get original url via using shortened url).
 
