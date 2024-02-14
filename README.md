@@ -8,6 +8,8 @@ Clone this repository to your local machine:
 Navigate to the project directory:
 > cd url_shortener_v2
 
+You can change url_shortener_value over from .env file, it is "ism.ca" as default
+
 Run docker code
 > docker-compose up --build
 
