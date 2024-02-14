@@ -13,7 +13,7 @@ Run docker code
 
 After docker started, you can reach to the app over port 8000
 
-- We have two endpoints: /url_shortener(you can shorten your url via this) and url_shortener/original_url(you can get original url via using shortened url).
+- We have two endpoints: base one "" (shorten_url,get all shorten_urls,delete all urls) and "/<shorten_url_value>"(you can get original url via using shortened url value and delete it).
 
 - To test the app, you can use Postman or directly access it from the Django Rest Framework (DRF) panel
 
