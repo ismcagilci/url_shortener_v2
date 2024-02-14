@@ -1,32 +1,55 @@
 
 # Create your views here.
 
-from rest_framework import generics
-from .serializers import ShortenedURLSerializer, OriginalURLSerializer
+from .serializers import ShortenedURLSerializer
 from .models import ShortenedURL
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import pyshorteners
-
-class ShortenerURLAPIView(generics.ListCreateAPIView):
-    # I have used ListCreateAPIView to create and list the shortened URLs
-    queryset = ShortenedURL.objects.all()
-    serializer_class = ShortenedURLSerializer
-
-    def perform_create(self, serializer):
-        original_url = serializer.validated_data['original_url']
-        shortened_url = pyshorteners.Shortener().tinyurl.short(original_url)
-        serializer.save(shortened_url=shortened_url)
+import hashlib
+from rest_framework.generics import get_object_or_404
+import os
 
 
-class OriginalURLAPIView(APIView):
-    # I have used APIView to get the original URL from the shortened URL
-    # We should send the shortened URL in the request body
+
+class ShortenerUrlListCreateDestroyAPIView(APIView):
+    """
+    List all shortened URLs and create a new shortened URL
+    """
+    def get(self, request):
+        shortened_urls = ShortenedURL.objects.all()
+        serializer = ShortenedURLSerializer(shortened_urls, many=True)
+        return Response(serializer.data)
+
     def post(self, request):
-        serializer = OriginalURLSerializer(data=request.data)
+        serializer = ShortenedURLSerializer(data=self.request.data)
         if serializer.is_valid():
-            shortened_url = ShortenedURL.objects.filter(shortened_url=serializer.data['shortened_url']).first()
-            if shortened_url:
-                return Response({'original_url': shortened_url.original_url})
-            return Response({'error': 'Shortened URL not found'}, status=404)
-        return Response(serializer.errors, status=400)
+            # Generate MD5 hash of the original URL and take the first 6 characters of the hash
+            original_url = serializer.validated_data['original_url']
+            check_original_url = ShortenedURL.objects.filter(original_url=original_url).first()
+            if check_original_url:
+                return Response({"error": "You already shortened same URL before"}, status=400)
+            hash_object = hashlib.md5(original_url.encode())
+            hash_value = hash_object.hexdigest()[:6].upper()
+            serializer.save(shortened_url_value=hash_value)
+            url_shortener_key = os.environ.get('URL_SHORTENER_KEY')
+            return Response({"shortened_url": f"{url_shortener_key}/{hash_value}"}, status=201)
+        else:
+            return Response(serializer.errors, status=400)
+
+    def delete(self, request):
+        ShortenedURL.objects.all().delete()
+        return Response(status=204)
+
+
+class OriginalUrlGetDestroyAPIView(APIView):
+    """
+    Get and delete the original URL
+    """
+    def get(self, request, shortened_url_value):
+        shortened_url_object = get_object_or_404(ShortenedURL, shortened_url_value = shortened_url_value)
+        serializer = ShortenedURLSerializer(shortened_url_object)
+        return Response({"original_url": serializer.data.get("original_url")}, status=200)
+    def delete(self, request, shortened_url_value):
+        shortened_url_object = get_object_or_404(ShortenedURL, shortened_url_value = shortened_url_value)
+        shortened_url_object.delete()
+        return Response(status=204)
